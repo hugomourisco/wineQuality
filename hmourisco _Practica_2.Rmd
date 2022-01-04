@@ -1,0 +1,354 @@
+---
+title: 'Tipología y Ciclo de Vida de los Dato - Práctica '
+author: "Autor: Hugo Mourisco Quirós"
+date: "enero 2022"
+output:
+  word_document: default
+  html_document:
+    highlight: default
+    number_sections: yes
+    theme: cosmo
+    toc: yes
+    toc_depth: 2
+  pdf_document:
+    highlight: zenburn
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+******
+# Descripción del dataset
+******
+Antes de comenzar con el análisis del dataset y la limpieza de los datos, procedemos a realizar la lectura de los ficheros en formato CSV, los cuales se encuentran en el siguiente enlace: https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/
+
+```{r}
+## lectura de datos
+data_red <- read.csv2("winequality-red.csv")
+data_red["type"] <- NA
+data_red$type <- "0"
+
+data_white <- read.csv2("winequality-white.csv")
+data_white["type"] <- NA
+data_white$type <- "1"
+
+data <- rbind(data_red, data_white)
+
+## resumen del data.frame
+str(data)
+```
+
+El conjunto de datos objeto de análisis está constituido por 13 variables que presentan 6497 observaciones. Las variables de este conjunto de datos son los siguientes:
+
+* **fixed.acidity**: los ácidos fijos predominantes que se encuentran en los vinos son tartárico, málico, cítrico y succínico. Esta variable muestra la cantidad de ácido tartárico por decímetro cúbico. 
+
+* **volatile.acidity**: esta variable representa la medida de los ácidos volátiles o gaseosos del vino. El principal ácido volátil del vino es el ácido acético, que también es el principal ácido asociado con el olor y el sabor del vinagre. Esta variable indica la cantidad de ácido acético por decímetro cúbico.
+
+* **citric.acid**: esta variable muestra la cantidad de ácido cítrico por decímetro cúbico. 
+
+* **residual.sugar**: el azúcar residual es la cantidad de azúcar que queda en el vino después del proceso de fermentación. Esta variable muestra la cantidad de azúcar residual por decímetro cúbico. 
+
+* **chlorides**: la cantidad de cloruro en el vino está influenciada tanto por el terreno como por el tipo de uva, y la importancia de cuantificación radica en el hecho de que el sabor del vino se ve fuertemente afectado por este ión particular, que, en alta concentración, da el vino tiene un sabor salado indeseable y disminuye significativamente su atractivo en el mercado. Esta variable muestra la cantidad de cloruro por decímetro cúbico.
+
+* **free.sulfur.dioxide**: el SO2 evita que el vino reaccione con el oxígeno, lo que puede provocar un pardeamiento y malos olores (oxidación), e inhibe el crecimiento de bacterias y levaduras silvestres indeseables en el mosto y el vino. Esta variable muestra el volumen de sulfitos naturales que se producen durante la fermentación. 
+
+* **total.sulfur.dioxide**: esta variable muestra el volumen total de sulfitos.
+
+* **density**: durante la fermentación alcohólica se mide constantemente la densidad. Esta variable muestra el volumen total de sulfitos. Esta variable muestra la densidad de mosto en gramos / centímetros cúbicos.
+
+* **pH**: en la escala de pH cuanto más cerca estamos del 0 más acidez presenta el vino. ... Tanto la fermentación alcohólica como la fermentación maloláctica tienden a reducir la Acidez Total del vino, elevando por tanto el pH. La cantidad de acidez es el elemento fundamental, aunque no único, que determina el pH de un vino. Esta variable muestra el nivel de pH.
+
+* **sulphates**: en la elaboración del vino, el sulfato de potasio actúa como antioxidante, eliminando todo el oxígeno suspendido en el vino, lo que ralentiza el envejecimiento. Los tapones de corcho natural permiten la microoxigenación al permitir que pequeñas cantidades de oxígeno regresen al vino para que los sabores puedan alcanzar su potencial. Esta variable muestra la cantidad de sulfato de potasio por decímetro cúbico. 
+
+* **alcohol**: esta variable muestra el volumen de alcohol.
+
+* **quality**: la evaluación de la calidad es a menudo parte del proceso de certificación y se puede utilizar para mejorar la elaboración del vino (identificando los factores más influyentes) y para estratificar vinos como las marcas premium (útil para fijar precios). Está variable establece el nivel de calidad del vino.
+
+* **type**: el tipo de vino (rojo o blanco).
+
+## Importancia del dataset
+¿Por qué es importante y qué pregunta/problema pretende responder?
+
+Desde hace ya muchos años el interés por el vino es muy importante en el mundo, lo que ha llevado al crecimiento de la industria del vino. La certificación de calidad es un paso crucial para determinar y ajustar el proceso de elaboración del vino y actualmente depende en gran medida de la cata de vinos por parte de expertos humanos. La forma de elaborar el vino en la actualidad, empleando los avances tecnológicos que proporcionan una alta conectividad entre los expertos del mundo ha dado lugar a un nuevo concepto denominado Globalización del vino. Este nuevo concepto hace que viñedos aparentemente separados geográficamente sean tratados de forma similar por un mismo enólogo. 
+
+Esta práctica tiene como objetivo analizar dicho dataset con el objetivo de ver que medidas incluídas en el mismo influyen más sobre la certificación de calidad de los vinos. También, se podrá proceder a crear modelos de regresión que sean útiles para apoyar las evaluaciones de cata de vinos, mejorar la producción de vino y desarrollar técnicas que puedan ayudar a modelar campañas de marketing según los gustos de los consumidores en los mercados especializados. 
+
+******
+# Integración y selección de los datos
+******
+Al ser un dataset con un número reducido de variables, creo que no se deben descartar ninguna de las variables antes de la limpieza de los datos. A demás, analizando la descripción de cada variable se comprende que todas ellas son importantes para los objetivos que se plantean. No obstante, a medida que se vaya profundizando en el análisis de cada una de las variables (varianza, valores extremos, etcétera) se seleccionaran grupos de variables.
+
+******
+# Limpieza de los datos
+******
+En primer lugar vamos a convertir las variables a numeric.
+```{r}
+library(dplyr)
+data <- data %>% mutate_if(is.character,as.numeric)
+```
+
+## Datos vacíos
+¿Los datos contienen ceros o elementos vacíos? ¿Cómo gestionarías cada uno de estos casos?
+
+Para conocer si existen datos vacíos en los registros del dataset utilizaremos la función sapply de R junto con la comprobación is.na(variable), la cual se emplea a continuación.
+```{r}
+# valores desconocidos por variable
+sapply(data, function(x) sum(is.na(x)))
+```
+
+El resultado es que no existen registros sin valores perdidos, por lo que no realizaremos ninguna operación para resolver este problema. No obstante, para resolver la pregunta de cómo gestionar al encontrarnos valores que contienen ceros o elementos vacíos, se pueden usar diferentes métodos para imputar valores como por ejemplo kNN o
+métodos de regresion.
+
+## Valores extremos
+Identificación y tratamiento de valores extremos. En primer lugar observamos los valores mínimos y máximos de cada variable, así como sus cuartiles, la media y la mediana. Para ello utilizaremos la función summary de R, la cual se emplea a continuación por cada variable.
+
+**fixed.acidity**
+```{r}
+summary(data$fixed.acidity)
+```
+
+**volatile.acidity**
+```{r}
+summary(data$volatile.acidity)
+```
+
+**citric.acid**
+```{r}
+summary(data$citric.acid)
+```
+
+**residual.sugar**
+```{r}
+summary(data$residual.sugar)
+```
+
+**chlorides**
+```{r}
+summary(data$chlorides)
+```
+
+**free.sulfur.dioxide**
+```{r}
+summary(data$free.sulfur.dioxide)
+```
+
+**total.sulfur.dioxide**
+```{r}
+summary(data$total.sulfur.dioxide)
+```
+
+**density**
+```{r}
+summary(data$density)
+```
+
+**pH**
+```{r}
+summary(data$pH)
+```
+
+**sulphates**
+```{r}
+summary(data$sulphates)
+```
+
+**alcohol**
+```{r}
+summary(data$alcohol)
+```
+
+**quality**
+```{r}
+summary(data$quality)
+```
+
+Para observar de una forma más sencilla los valores extremos utilizaremos los diagramas de caja con la función boxplot de R, la cual se emplea a continuación por cada variable.
+```{r}
+par(mfrow=c(2,2))
+for (i in 1:ncol(data[1:ncol(data) -1])) {
+  boxplot(data[,i], main = colnames(data)[i], width=100)
+}
+```
+
+Los valores extremos parecen ser congruentes respecto a los valores que pueden tomar cada una de las variables. Si es cierto que algunas variables tienen valores que distan "mucho" del rango intercuartílico, pero entendemos que no son registros que provengan de datos erróneos.
+
+******
+# Análisis de los datos
+******
+## Selección de los grupos de datos
+Selección de los grupos de datos que se quieren analizar/comparar (planificación de los análisis a aplicar).
+
+En esta practica se selecciona la variable **type** para determinar la separación en grupos. Recordamos que el valor 0 representa los registros para vino tinto y el valor 1 para los registros para vino blanco.
+
+## Normalidad y homogeneidad de la varianza
+Comprobación de la normalidad y homogeneidad de la varianza.
+
+Se utiliza la prueba de normalidad de Shapiro-Test para comprobar que los valores que toman las variables cuantitativas estan distribíidos normalmente. Si se obtiene un p-valor superior al nivel de significación prefijado α = 0, 05, entonces se considera que variable en cuestión sigue una distribución normal.
+
+**fixed.acidity**
+```{r}
+shapiro.test(data$fixed.acidity[0:5000])
+```
+
+**volatile.acidity**
+```{r}
+shapiro.test(data$volatile.acidity[0:5000])
+```
+
+**citric.acid**
+```{r}
+shapiro.test(data$citric.acid[0:5000])
+```
+
+**residual.sugar**
+```{r}
+shapiro.test(data$residual.sugar[0:5000])
+```
+
+**chlorides**
+```{r}
+shapiro.test(data$chlorides[0:5000])
+```
+
+**free.sulfur.dioxide**
+```{r}
+shapiro.test(data$free.sulfur.dioxide[0:5000])
+```
+
+**total.sulfur.dioxide**
+```{r}
+shapiro.test(data$total.sulfur.dioxide[0:5000])
+```
+
+**density**
+```{r}
+shapiro.test(data$density[0:5000])
+```
+
+**pH**
+```{r}
+shapiro.test(data$pH[0:5000])
+```
+
+**sulphates**
+```{r}
+shapiro.test(data$sulphates[0:5000])
+```
+
+**alcohol**
+```{r}
+shapiro.test(data$alcohol[0:5000])
+```
+
+**quality**
+```{r}
+shapiro.test(data$quality[0:5000])
+```
+
+El test nos indica que ninguna variable está normalizada, ya que el valor p-valor es inferior a  α = 0, 05.
+
+A continuación, se estudia homogeneidad de varianzas mediante la aplicación de un test de Fligner-Killeen. Estudiamos esta homogeneidad en cuanto a los grupos conformados por los vinos tintos con respecto a los vinos blancos. Las varianzas son iguales determinan la hipotesis nula.
+```{r}
+fligner.test(quality ~ type, data = data)
+```
+
+Como resultado obtenemos que el valor p-valor es superiro a  α = 0, 05, entonces aceptamos que las varianzas de ambas muestras son homogéneas.
+
+## Aplicación de pruebas estadísticas
+Aplicación de pruebas estadísticas para comparar los grupos de datos. En función de los datos y el objetivo del estudio, aplicar pruebas de contraste de hipótesis, correlaciones, regresiones, etc. Aplicar al menos tres métodos de análisis diferentes.
+
+### ¿Qué variables cuantitativas influyen más en la calidad del vino?
+El primer método que vamos a aplicar va a ser un análisis de correlación entre las distintas variables para determinar cuáles de ellas ejercen una mayor influencia sobre la calidad del vino tino y del vino blanco. Para ello, se utilizará el coeficiente de correlación de Spearman, puesto que hemos visto que tenemos datos que no siguen una distribución normal.
+```{r}
+library(ggplot2)
+library(corrplot)
+corData.cor <- round(cor(data, method = "pearson", use = "complete.obs"), digits=2)
+corrplot(corData.cor, method = "shade", addCoef.col = "black", tl.col = "black", tl.srt = 45, number.cex=0.75)
+```
+
+Con el anterior diagrama determinamos que no existe ninguna correlación fuerte entre las variables y la calidad del vino, por lo que entendemos que no se puede determinar que a partir de una variable se pueda determinar la calidad del vino.
+
+### ¿La calidad del vino es superior si el vino es de tipo vino tinto?
+La segunda prueba estadística que se aplicará consistirá en un contraste de hipótesis sobre dos muestras para determinar si la calidad del vino es superior dependiendo del tipo, vino tinto o vino blanco.
+
+Así, se plantea el siguiente contraste de hipótesis de dos muestras sobre la diferencia de medias, el cual es unilateral atendiendo a la formulación de la hipótesis alternativa:
+H0: media de la calidad dela poblacion de vino tinto - media de la calidad dela poblacion de vino blanco = 0
+H1: media de la calidad dela poblacion de vino tinto - media de la calidad dela poblacion de vino blanco < 0
+
+```{r}
+t.test(data_red$quality, data_white$quality, alternative = "less")
+```
+Puesto que obtenemos un p-valor menor que el valor de significación fijado a α = 0, 05, rechazamos la hipótesis nula. Aceptamos la hipotesis alternativa, la calidad del vino tinto en las muestras es inferior a la calidad del vino blanco.
+
+### Regresión lineal para predecir la calidad del vino
+Determinada que no existe una correlación fuerte de las variables respecto a la calidad del vino, vamos a utilizar en primer lugar un modelo de regresión linear con la variable alcohol y a continuación otro modelo con un conjunto de variables para observar que resultados ofrece los modelos de regresión y si podemos precedir la calidad del vino a partir de dichas variables.
+```{r}
+# modelo de regresión con una variable (alcohol)
+quality_lm = lm(quality ~ alcohol, data = data)
+summary(quality_lm)
+
+# modelo de regresión con un conjunto de variables
+quality_lm = lm(quality ~ alcohol + volatile.acidity + density, data = data)
+summary(quality_lm)
+```
+
+Obtenemos que usando varias variables en el modelo, el resultado es  más conveniente dado que tiene un mayor coeficiente de determinación (r-squared).
+
+******
+# Representación de los resultados
+******
+Representación de los resultados a partir de tablas y gráficas.
+
+Vamos a convertir en primer lugar la variable **quality** en binaria, para determinar si un vino es bueno o no.
+```{r}
+data$quality <- ifelse(data$quality > 6, 1, 0)
+```
+
+Esta conversión nos permite analizar las variables usadas en el segundo modelo de regresión lineal para determinar si un vino es bueno o malo.
+```{r}
+ggplot(data, aes(x=alcohol,fill=factor(quality)))+geom_density(alpha=0.25)+
+  geom_vline(aes(xintercept=mean(alcohol[quality==0],na.rm=T)),color="red",linetype="dashed",lwd=1)+
+  geom_vline(aes(xintercept=mean(alcohol[quality==1],na.rm=T)),color="blue",linetype="dashed",lwd=1)+
+  scale_x_continuous(breaks = seq(4,16,1))+
+  xlab(label = "Alcohol Level")+
+  ggtitle("Distribution of Alcohol Levels")+
+  theme_classic()
+```
+
+```{r}
+ggplot(data, aes(x=volatile.acidity,fill=factor(quality)))+geom_density(alpha=0.25)+
+  geom_vline(aes(xintercept=mean(volatile.acidity[quality==0],na.rm=T)),color="red",linetype="dashed",lwd=1)+
+  geom_vline(aes(xintercept=mean(volatile.acidity[quality==1],na.rm=T)),color="blue",linetype="dashed",lwd=1)+
+  scale_x_continuous(breaks = seq(4,16,1))+
+  xlab(label = "Volatile acidity Level")+
+  ggtitle("Distribution of Volatile acidity Levels")+
+  theme_classic()
+```
+
+```{r}
+ggplot(data, aes(x=density,fill=factor(quality)))+geom_density(alpha=0.25)+
+  geom_vline(aes(xintercept=mean(density[quality==0],na.rm=T)),color="red",linetype="dashed",lwd=1)+
+  geom_vline(aes(xintercept=mean(density[quality==1],na.rm=T)),color="blue",linetype="dashed",lwd=1)+
+  scale_x_continuous(breaks = seq(4,16,1))+
+  xlab(label = "Density Level")+
+  ggtitle("Distribution of Density Levels")+
+  theme_classic()
+```
+
+******
+# Conclusiones
+******
+Resolución del problema. A partir de los resultados obtenidos, ¿cuáles son las conclusiones? ¿Los resultados permiten responder al problema? 
+
+En primer lugar se ha observado que los dos dataset analizados tenían ya un preprocesamiento bien determinado, posiblemente porque los registros se hayan obtenido de sensores destinados a tal objetivo. Y es que no ha sido necesario realizar ajustes para solucionar posibles casos de valores nulos o vacíos y a valores extremos como resultado de una incorrecta generación del dataset.
+
+En segundo lugar se ha hecho un breve análisis estadístico con el objetivo de determinar la correlación de todos los parámetros con respecto a la calidad del vino, no obteniedo grandes evidencias de que ciertas variables lleguen a influir. También se ha realizado un contraste de hipotesis a partir de las observaciones registradas para el vino tino y el vino blanco, determinando mejores valoraciones en cuanto a calidad para las observaciones de vino blanco. Y por último se ha aplicado dos modelos de regresión lineal para determinar que para determinar la calidad del vino, cuantas más variables se utilicen mayor determinación tendrá la predicción de la calidad.
+
+******
+# Exportación de los datos utilizados
+******
+```{r}
+write.csv(data, file = "./winequality-data.csv")
+```
